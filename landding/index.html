@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>Dra. Camila Ríos — Abogada</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1c2a3a; scroll-behavior: smooth; }
+  a { text-decoration: none; }
+
+  header { position: fixed; top: 0; width: 100%; background: white; box-shadow: 0 1px 6px rgba(0,0,0,0.06); z-index: 100; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+  .logo { font-weight: bold; font-size: 18px; color: #16324f; }
+  nav a { margin-left: 28px; color: #444; font-size: 14px; }
+  nav a:hover { color: #16324f; }
+
+  .hero { min-height: 100vh; display: flex; align-items: center; padding: 100px 60px 60px; background: linear-gradient(120deg, #16324f, #274e6f); color: white; gap: 40px; flex-wrap: wrap; }
+  .hero-text { flex: 1; min-width: 300px; }
+  .hero-text h1 { font-size: 38px; line-height: 1.3; margin-bottom: 16px; }
+  .hero-text p { color: #cfdcea; font-size: 16px; margin-bottom: 24px; max-width: 480px; }
+  .btn-primary { background: #e0a458; color: #16324f; padding: 14px 28px; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; border: none; cursor: pointer; }
+  .hero-img { flex: 1; min-width: 260px; display: flex; justify-content: center; }
+  .hero-img img { width: 280px; height: 280px; object-fit: cover; border-radius: 50%; border: 6px solid rgba(255,255,255,0.15); }
+
+  section { padding: 80px 60px; }
+  .section-title { text-align: center; font-size: 28px; margin-bottom: 10px; }
+  .section-sub { text-align: center; color: #667; margin-bottom: 40px; font-size: 14px; }
+
+  .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; }
+  .service-card { border: 1px solid #eee; border-radius: 12px; padding: 26px; text-align: center; transition: 0.2s; }
+  .service-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,0.06); transform: translateY(-4px); }
+  .service-card .emoji { font-size: 30px; margin-bottom: 12px; }
+  .service-card h3 { font-size: 16px; margin-bottom: 8px; }
+  .service-card p { font-size: 13px; color: #666; line-height: 1.5; }
+
+  .about { background: #f7f9fb; }
+  .about-flex { display: flex; gap: 40px; max-width: 1000px; margin: 0 auto; align-items: center; flex-wrap: wrap; }
+  .about-flex .stats { display: flex; gap: 30px; margin-top: 24px; flex-wrap: wrap; }
+  .stat .num { font-size: 26px; font-weight: bold; color: #16324f; }
+  .stat .label { font-size: 12px; color: #777; }
+  .about-flex p { color: #555; line-height: 1.7; font-size: 14px; max-width: 480px; }
+
+  .testimonials { background: white; }
+  .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; max-width: 1100px; margin: 0 auto; }
+  .test-card { background: #f7f9fb; border-radius: 12px; padding: 24px; font-size: 14px; }
+  .test-card .stars { color: #e0a458; margin-bottom: 10px; }
+  .test-card .name { font-weight: bold; margin-top: 12px; font-size: 13px; }
+
+  .contact { background: #16324f; color: white; }
+  .contact-flex { display: flex; gap: 50px; max-width: 1000px; margin: 0 auto; flex-wrap: wrap; }
+  .contact-info { flex: 1; min-width: 240px; }
+  .contact-info p { color: #cfdcea; margin: 10px 0; font-size: 14px; }
+  .contact-form { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 12px; }
+  .contact-form input, .contact-form textarea { padding: 12px; border-radius: 6px; border: none; font-size: 14px; }
+  .contact-form button { background: #e0a458; color: #16324f; font-weight: bold; border: none; padding: 12px; border-radius: 6px; cursor: pointer; }
+
+  footer { text-align: center; padding: 20px; background: #0f2233; color: #8aa; font-size: 12px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #16324f; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 400; opacity: 0; transition: all 0.3s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Dra. Camila Ríos</div>
+  <nav>
+    <a href="#servicios">Servicios</a>
+    <a href="#sobre-mi">Sobre mí</a>
+    <a href="#testimonios">Testimonios</a>
+    <a href="#contacto">Contacto</a>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-text">
+    <h1>Asesoramiento legal claro, cercano y a tu medida</h1>
+    <p>Más de 12 años ayudando a personas y empresas a resolver sus problemas legales con tranquilidad y resultados concretos.</p>
+    <button class="btn-primary" onclick="document.getElementById('contacto').scrollIntoView()">Solicitar consulta</button>
+  </div>
+  <div class="hero-img">
+    <img src="https://picsum.photos/seed/abogada/300/300">
+  </div>
+</section>
+
+<section id="servicios">
+  <h2 class="section-title">Áreas de práctica</h2>
+  <p class="section-sub">Soluciones legales para cada necesidad</p>
+  <div class="services-grid">
+    <div class="service-card"><div class="emoji">⚖️</div><h3>Derecho civil</h3><p>Contratos, sucesiones, reclamos y asesoramiento en conflictos entre particulares.</p></div>
+    <div class="service-card"><div class="emoji">🏢</div><h3>Derecho comercial</h3><p>Constitución de empresas, contratos comerciales y asesoría societaria.</p></div>
+    <div class="service-card"><div class="emoji">👨‍👩‍👧</div><h3>Derecho de familia</h3><p>Divorcios, alimentos, tenencia y régimen de visitas.</p></div>
+    <div class="service-card"><div class="emoji">🏠</div><h3>Derecho inmobiliario</h3><p>Compraventa, alquileres y regularización de propiedades.</p></div>
+  </div>
+</section>
+
+<section class="about" id="sobre-mi">
+  <div class="about-flex">
+    <div>
+      <h2 class="section-title" style="text-align:left;">Sobre mí</h2>
+      <p>Soy abogada matriculada con más de una década de experiencia en distintas áreas del derecho. Mi enfoque combina rigurosidad profesional con un trato cercano, para que cada cliente entienda claramente sus opciones y se sienta acompañado durante todo el proceso.</p>
+      <div class="stats">
+        <div class="stat"><div class="num">12+</div><div class="label">Años de experiencia</div></div>
+        <div class="stat"><div class="num">300+</div><div class="label">Casos resueltos</div></div>
+        <div class="stat"><div class="num">98%</div><div class="label">Clientes satisfechos</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="testimonials" id="testimonios">
+  <h2 class="section-title">Lo que dicen mis clientes</h2>
+  <p class="section-sub">Experiencias reales de personas que confiaron en mi trabajo</p>
+  <div class="test-grid">
+    <div class="test-card"><div class="stars">★★★★★</div>"Me ayudó a resolver un tema de herencia que parecía imposible. Muy profesional y clara en todo momento."<div class="name">— Marcela G.</div></div>
+    <div class="test-card"><div class="stars">★★★★★</div>"Excelente atención, siempre disponible para responder dudas. Recomendable al 100%."<div class="name">— Fernando L.</div></div>
+    <div class="test-card"><div class="stars">★★★★★</div>"Gestionó todo el proceso de constitución de mi empresa de forma rápida y sin complicaciones."<div class="name">— Julieta M.</div></div>
+  </div>
+</section>
+
+<section class="contact" id="contacto">
+  <div class="contact-flex">
+    <div class="contact-info">
+      <h2 style="margin-bottom:16px;">Contactame</h2>
+      <p>📍 Mendoza, Argentina</p>
+      <p>📞 +54 9 261 000-0000</p>
+      <p>✉️ contacto@camilarios.com</p>
+      <p>🕒 Lunes a viernes de 9 a 18hs</p>
+    </div>
+    <form class="contact-form" onsubmit="enviarFormulario(event)">
+      <input type="text" placeholder="Nombre completo" required>
+      <input type="email" placeholder="Email" required>
+      <textarea placeholder="Contame tu consulta" rows="4" required></textarea>
+      <button type="submit">Enviar consulta</button>
+    </form>
+  </div>
+</section>
+
+<footer>© 2026 Dra. Camila Ríos — Todos los derechos reservados</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function enviarFormulario(e) {
+  e.preventDefault();
+  const toast = document.getElementById('toast');
+  toast.textContent = '¡Consulta enviada! Te contactaré a la brevedad.';
+  toast.classList.add('show');
+  e.target.reset();
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

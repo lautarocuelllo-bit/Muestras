@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>Genesis Barber — Reserva de Turnos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fdf6f0; color: #2b2b2b; }
+  header { background: #3d2b2b; color: white; padding: 20px 32px; text-align: center; }
+  header h1 { font-size: 24px; letter-spacing: 2px; }
+  header p { color: #d8b8a8; font-size: 13px; margin-top: 4px; }
+
+  .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+  .steps { display: flex; justify-content: center; gap: 8px; margin-bottom: 30px; }
+  .step { padding: 8px 18px; border-radius: 20px; background: #eee; font-size: 13px; color: #999; }
+  .step.active { background: #3d2b2b; color: white; }
+
+  .card { background: white; border-radius: 12px; padding: 28px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin-bottom: 20px; }
+  .card h2 { font-size: 18px; margin-bottom: 16px; }
+
+  .service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .service-item { border: 1px solid #eee; border-radius: 10px; padding: 16px; cursor: pointer; transition: 0.2s; }
+  .service-item:hover { border-color: #c9a68a; }
+  .service-item.selected { border-color: #3d2b2b; background: #fdf6f0; }
+  .service-item h3 { font-size: 15px; margin-bottom: 4px; }
+  .service-item .meta { font-size: 12px; color: #888; }
+  .service-item .price { font-weight: bold; margin-top: 8px; display: block; }
+
+  .prof-grid { display: flex; gap: 14px; flex-wrap: wrap; }
+  .prof-item { flex: 1; min-width: 140px; text-align: center; border: 1px solid #eee; border-radius: 10px; padding: 16px; cursor: pointer; }
+  .prof-item.selected { border-color: #3d2b2b; background: #fdf6f0; }
+  .avatar { width: 56px; height: 56px; border-radius: 50%; background: #d8b8a8; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin: 0 auto 8px; }
+
+  .day-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+  .day-item { min-width: 70px; text-align: center; padding: 10px; border: 1px solid #eee; border-radius: 10px; cursor: pointer; }
+  .day-item.selected { background: #3d2b2b; color: white; }
+  .day-item .num { font-size: 18px; font-weight: bold; }
+  .day-item .name { font-size: 11px; color: inherit; opacity: 0.8; }
+
+  .time-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin-top: 14px; }
+  .time-item { padding: 10px; text-align: center; border: 1px solid #eee; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .time-item.selected { background: #3d2b2b; color: white; }
+  .time-item.disabled { color: #ccc; cursor: not-allowed; text-decoration: line-through; }
+
+  input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 12px; }
+
+  .summary-box { background: #fdf6f0; border-radius: 10px; padding: 16px; font-size: 14px; }
+  .summary-box div { display: flex; justify-content: space-between; margin-bottom: 6px; }
+
+  .btn { background: #3d2b2b; color: white; border: none; padding: 14px; border-radius: 8px; font-size: 14px; cursor: pointer; width: 100%; }
+  .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .confirm { text-align: center; padding: 60px 20px; }
+  .confirm .icon { font-size: 50px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GENESIS BARBER</h1>
+  <p>Reservá tu turno online en pocos pasos</p>
+</header>
+
+<div class="container">
+  <div class="steps" id="stepsBar"></div>
+  <div id="content"></div>
+</div>
+
+<script>
+const servicios = [
+  { id: 1, nombre: 'Corte de pelo', duracion: '30 min', precio: 8000 },
+  { id: 2, nombre: 'Color y mechas', duracion: '90 min', precio: 25000 },
+  { id: 3, nombre: 'Peinado para evento', duracion: '45 min', precio: 15000 },
+  { id: 4, nombre: 'Manicura', duracion: '40 min', precio: 9000 },
+  { id: 5, nombre: 'Barba y afeitado', duracion: '25 min', precio: 6000 },
+  { id: 6, nombre: 'Tratamiento capilar', duracion: '50 min', precio: 18000 },
+];
+
+const profesionales = [
+  { id: 1, nombre: 'Vale', inicial: 'V' },
+  { id: 2, nombre: 'Nico', inicial: 'N' },
+  { id: 3, nombre: 'Cualquiera', inicial: '?' },
+];
+
+const horariosOcupados = ['10:00', '11:30', '15:00'];
+const horarios = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','15:00','15:30','16:00','16:30','17:00'];
+
+let paso = 1;
+let seleccion = { servicio: null, profesional: null, dia: null, hora: null, nombre: '', telefono: '' };
+
+function generarDias() {
+  const dias = [];
+  const nombres = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const hoy = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(hoy);
+    d.setDate(hoy.getDate() + i);
+    dias.push({ fecha: d.getDate(), nombre: nombres[d.getDay()], key: d.toDateString() });
+  }
+  return dias;
+}
+const dias = generarDias();
+
+function renderSteps() {
+  const nombres = ['Servicio', 'Profesional', 'Fecha y hora', 'Confirmar'];
+  document.getElementById('stepsBar').innerHTML = nombres.map((n, i) =>
+    `<div class="step ${i+1===paso?'active':''}">${i+1}. ${n}</div>`).join('');
+}
+
+function render() {
+  renderSteps();
+  const cont = document.getElementById('content');
+  if (paso === 1) {
+    cont.innerHTML = `
+      <div class="card">
+        <h2>Elegí un servicio</h2>
+        <div class="service-grid">
+          ${servicios.map(s => `
+            <div class="service-item ${seleccion.servicio?.id===s.id?'selected':''}" onclick="elegirServicio(${s.id})">
+              <h3>${s.nombre}</h3>
+              <div class="meta">${s.duracion}</div>
+              <span class="price">$${s.precio.toLocaleString('es-AR')}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+      <button class="btn" ${!seleccion.servicio?'disabled':''} onclick="irPaso(2)">Continuar</button>
+    `;
+  } else if (paso === 2) {
+    cont.innerHTML = `
+      <div class="card">
+        <h2>Elegí profesional</h2>
+        <div class="prof-grid">
+          ${profesionales.map(p => `
+            <div class="prof-item ${seleccion.profesional?.id===p.id?'selected':''}" onclick="elegirProfesional(${p.id})">
+              <div class="avatar">${p.inicial}</div>
+              <div>${p.nombre}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <button class="btn" ${!seleccion.profesional?'disabled':''} onclick="irPaso(3)">Continuar</button>
+    `;
+  } else if (paso === 3) {
+    cont.innerHTML = `
+      <div class="card">
+        <h2>Elegí día</h2>
+        <div class="day-grid">
+          ${dias.map(d => `
+            <div class="day-item ${seleccion.dia?.key===d.key?'selected':''}" onclick='elegirDia(${JSON.stringify(d)})'>
+              <div class="num">${d.fecha}</div>
+              <div class="name">${d.nombre}</div>
+            </div>`).join('')}
+        </div>
+        <h2 style="margin-top:20px;">Elegí horario</h2>
+        <div class="time-grid">
+          ${horarios.map(h => `
+            <div class="time-item ${horariosOcupados.includes(h)?'disabled':''} ${seleccion.hora===h?'selected':''}"
+                 onclick="${horariosOcupados.includes(h)?'':`elegirHora('${h}')`}">${h}</div>`).join('')}
+        </div>
+      </div>
+      <button class="btn" ${!(seleccion.dia && seleccion.hora)?'disabled':''} onclick="irPaso(4)">Continuar</button>
+    `;
+  } else if (paso === 4) {
+    cont.innerHTML = `
+      <div class="card">
+        <h2>Tus datos</h2>
+        <input type="text" id="inputNombre" placeholder="Nombre y apellido" value="${seleccion.nombre}">
+        <input type="tel" id="inputTelefono" placeholder="Teléfono" value="${seleccion.telefono}">
+      </div>
+      <div class="card">
+        <h2>Resumen del turno</h2>
+        <div class="summary-box">
+          <div><span>Servicio</span><span>${seleccion.servicio.nombre}</span></div>
+          <div><span>Profesional</span><span>${seleccion.profesional.nombre}</span></div>
+          <div><span>Fecha</span><span>${seleccion.dia.nombre} ${seleccion.dia.fecha}</span></div>
+          <div><span>Hora</span><span>${seleccion.hora}</span></div>
+          <div><span>Precio</span><span>$${seleccion.servicio.precio.toLocaleString('es-AR')}</span></div>
+        </div>
+      </div>
+      <button class="btn" onclick="confirmarTurno()">Confirmar turno</button>
+    `;
+  } else if (paso === 5) {
+    cont.innerHTML = `
+      <div class="card confirm">
+        <div class="icon">✅</div>
+        <h2>¡Turno confirmado!</h2>
+        <p style="margin-top:10px; color:#777;">Te esperamos el ${seleccion.dia.nombre} ${seleccion.dia.fecha} a las ${seleccion.hora}hs.</p>
+        <button class="btn" style="margin-top:24px;" onclick="reiniciar()">Reservar otro turno</button>
+      </div>
+    `;
+  }
+}
+
+function elegirServicio(id) { seleccion.servicio = servicios.find(s => s.id === id); render(); }
+function elegirProfesional(id) { seleccion.profesional = profesionales.find(p => p.id === id); render(); }
+function elegirDia(d) { seleccion.dia = d; render(); }
+function elegirHora(h) { seleccion.hora = h; render(); }
+function irPaso(p) { paso = p; render(); }
+
+function confirmarTurno() {
+  seleccion.nombre = document.getElementById('inputNombre').value;
+  seleccion.telefono = document.getElementById('inputTelefono').value;
+  if (!seleccion.nombre || !seleccion.telefono) { alert('Completá tus datos para confirmar.'); return; }
+  paso = 5;
+  render();
+}
+
+function reiniciar() {
+  seleccion = { servicio: null, profesional: null, dia: null, hora: null, nombre: '', telefono: '' };
+  paso = 1;
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
