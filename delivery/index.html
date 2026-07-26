@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>GenesisYa — Delivery de Comida</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff8f2; color: #2b2b2b; }
+  header { background: #e8542c; color: white; padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 20px; font-weight: bold; }
+  .cart-btn { background: white; color: #e8542c; border: none; padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 13px; position: relative; }
+  .cart-badge { position: absolute; top: -6px; right: -6px; background: #2b2b2b; color: white; font-size: 11px; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+  .categories { display: flex; gap: 10px; padding: 16px 32px; overflow-x: auto; background: white; border-bottom: 1px solid #eee; }
+  .categories button { padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+  .categories button.active { background: #e8542c; color: white; border-color: #e8542c; }
+
+  .container { max-width: 1000px; margin: 0 auto; padding: 24px 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; }
+  .dish-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+  .dish-img { width: 100%; height: 140px; object-fit: cover; }
+  .dish-info { padding: 14px; }
+  .dish-info h3 { font-size: 15px; margin-bottom: 4px; }
+  .dish-info p { font-size: 12px; color: #888; margin-bottom: 10px; min-height: 32px; }
+  .dish-footer { display: flex; justify-content: space-between; align-items: center; }
+  .dish-price { font-weight: bold; }
+  .add-btn { background: #e8542c; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; }
+
+  .cart-drawer { position: fixed; top: 0; right: -400px; width: 380px; height: 100%; background: white; box-shadow: -4px 0 20px rgba(0,0,0,0.15); z-index: 300; transition: right 0.3s; display: flex; flex-direction: column; }
+  .cart-drawer.open { right: 0; }
+  .cart-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+  .cart-header button { background: none; border: none; font-size: 20px; cursor: pointer; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .cart-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 13px; }
+  .qty-controls { display: flex; align-items: center; gap: 8px; }
+  .qty-controls button { width: 22px; height: 22px; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; }
+  .cart-footer { padding: 20px; border-top: 1px solid #eee; }
+  .cart-total { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 12px; }
+  .checkout-btn { width: 100%; background: #e8542c; color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 250; }
+  .backdrop.show { display: block; }
+  .empty-cart { text-align: center; color: #999; padding: 60px 20px; font-size: 13px; }
+
+  /* SEGUIMIENTO DE PEDIDO */
+  .tracking-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 400; align-items: center; justify-content: center; }
+  .tracking-overlay.show { display: flex; }
+  .tracking-box { background: white; border-radius: 16px; padding: 32px; max-width: 420px; width: 90%; text-align: center; }
+  .tracking-steps { display: flex; justify-content: space-between; margin: 24px 0; position: relative; }
+  .tracking-steps::before { content: ''; position: absolute; top: 16px; left: 0; right: 0; height: 3px; background: #eee; z-index: 0; }
+  .t-step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: #aaa; }
+  .t-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #eee; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .t-step.done .dot { background: #e8542c; color: white; }
+  .t-step.done { color: #e8542c; font-weight: bold; }
+  .track-msg { font-size: 14px; color: #555; margin-top: 10px; }
+  .track-close { margin-top: 20px; background: #2b2b2b; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🍔 GenesisYa</div>
+  <button class="cart-btn" onclick="toggleCart(true)">🛒 Carrito <span class="cart-badge" id="cartBadge">0</span></button>
+</header>
+
+<div class="categories" id="categories"></div>
+
+<div class="container">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="backdrop" id="backdrop" onclick="toggleCart(false)"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-header"><h3>Tu pedido</h3><button onclick="toggleCart(false)">✕</button></div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cartTotal">$0</span></div>
+    <button class="checkout-btn" onclick="confirmarPedido()">Confirmar pedido</button>
+  </div>
+</div>
+
+<div class="tracking-overlay" id="trackingOverlay">
+  <div class="tracking-box">
+    <h2>Tu pedido está en camino 🛵</h2>
+    <div class="tracking-steps">
+      <div class="t-step" id="tstep-0"><div class="dot">✅</div>Confirmado</div>
+      <div class="t-step" id="tstep-1"><div class="dot">👨‍🍳</div>Preparando</div>
+      <div class="t-step" id="tstep-2"><div class="dot">🛵</div>En camino</div>
+      <div class="t-step" id="tstep-3"><div class="dot">🏠</div>Entregado</div>
+    </div>
+    <div class="track-msg" id="trackMsg">Estamos confirmando tu pedido...</div>
+    <button class="track-close" onclick="cerrarTracking()">Cerrar</button>
+  </div>
+</div>
+
+<script>
+const platos = [
+  { id: 1, nombre: 'Hamburguesa doble cheddar', cat: 'Hamburguesas', precio: 9500, desc: 'Doble carne, cheddar, panceta y salsa especial.', img: 'https://picsum.photos/seed/burger1/400/260' },
+  { id: 2, nombre: 'Hamburguesa veggie', cat: 'Hamburguesas', precio: 8500, desc: 'Medallón de vegetales, rúcula y alioli.', img: 'https://picsum.photos/seed/burger2/400/260' },
+  { id: 3, nombre: 'Pizza muzzarella', cat: 'Pizzas', precio: 11000, desc: 'Salsa de tomate, muzzarella y orégano.', img: 'https://picsum.photos/seed/pizza1/400/260' },
+  { id: 4, nombre: 'Pizza napolitana', cat: 'Pizzas', precio: 12500, desc: 'Muzzarella, tomate fresco y ajo.', img: 'https://picsum.photos/seed/pizza2/400/260' },
+  { id: 5, nombre: 'Sushi variado 20p', cat: 'Sushi', precio: 15800, desc: '20 piezas surtidas de sushi y rolls.', img: 'https://picsum.photos/seed/sushi1/400/260' },
+  { id: 6, nombre: 'Ensalada César', cat: 'Ensaladas', precio: 7200, desc: 'Pollo grillado, lechuga, parmesano y crutones.', img: 'https://picsum.photos/seed/salad1/400/260' },
+  { id: 7, nombre: 'Papas fritas cheddar y bacon', cat: 'Acompañamientos', precio: 5400, desc: 'Papas con cheddar fundido y panceta crocante.', img: 'https://picsum.photos/seed/fries1/400/260' },
+  { id: 8, nombre: 'Limonada casera', cat: 'Bebidas', precio: 3200, desc: 'Limonada natural con menta.', img: 'https://picsum.photos/seed/drink1/400/260' },
+];
+
+const categorias = ['Todos', ...new Set(platos.map(p => p.cat))];
+let filtroActual = 'Todos';
+let carrito = [];
+
+function renderCategorias() {
+  document.getElementById('categories').innerHTML = categorias.map(c =>
+    `<button class="${c===filtroActual?'active':''}" onclick="filtrar('${c}')">${c}</button>`).join('');
+}
+
+function filtrar(c) { filtroActual = c; renderCategorias(); renderGrid(); }
+
+function renderGrid() {
+  const lista = filtroActual === 'Todos' ? platos : platos.filter(p => p.cat === filtroActual);
+  document.getElementById('grid').innerHTML = lista.map(p => `
+    <div class="dish-card">
+      <img class="dish-img" src="${p.img}">
+      <div class="dish-info">
+        <h3>${p.nombre}</h3>
+        <p>${p.desc}</p>
+        <div class="dish-footer">
+          <span class="dish-price">$${p.precio.toLocaleString('es-AR')}</span>
+          <button class="add-btn" onclick="agregarAlCarrito(${p.id})">+</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function agregarAlCarrito(id) {
+  const plato = platos.find(p => p.id === id);
+  const existente = carrito.find(i => i.id === id);
+  if (existente) existente.cantidad++;
+  else carrito.push({ ...plato, cantidad: 1 });
+  renderCart();
+}
+
+function cambiarCantidad(id, delta) {
+  const item = carrito.find(i => i.id === id);
+  item.cantidad += delta;
+  if (item.cantidad <= 0) carrito = carrito.filter(i => i.id !== id);
+  renderCart();
+}
+
+function renderCart() {
+  const count = carrito.reduce((a, i) => a + i.cantidad, 0);
+  document.getElementById('cartBadge').textContent = count;
+
+  const cont = document.getElementById('cartItems');
+  cont.innerHTML = carrito.length ? carrito.map(i => `
+    <div class="cart-item">
+      <div><strong>${i.nombre}</strong><br><span style="color:#888;">$${i.precio.toLocaleString('es-AR')}</span></div>
+      <div class="qty-controls">
+        <button onclick="cambiarCantidad(${i.id}, -1)">−</button>
+        <span>${i.cantidad}</span>
+        <button onclick="cambiarCantidad(${i.id}, 1)">+</button>
+      </div>
+    </div>
+  `).join('') : '<div class="empty-cart">Tu carrito está vacío</div>';
+
+  const total = carrito.reduce((a, i) => a + i.precio * i.cantidad, 0);
+  document.getElementById('cartTotal').textContent = '$' + total.toLocaleString('es-AR');
+}
+
+function toggleCart(open) {
+  document.getElementById('cartDrawer').classList.toggle('open', open);
+  document.getElementById('backdrop').classList.toggle('show', open);
+}
+
+function confirmarPedido() {
+  if (carrito.length === 0) { alert('Agregá algo al carrito primero.'); return; }
+  toggleCart(false);
+  iniciarTracking();
+}
+
+function iniciarTracking() {
+  document.getElementById('trackingOverlay').classList.add('show');
+  const mensajes = [
+    'Estamos confirmando tu pedido...',
+    'El restaurante está preparando tu comida 👨‍🍳',
+    'Tu repartidor está en camino 🛵',
+    '¡Tu pedido fue entregado! Buen provecho 🎉'
+  ];
+  let paso = 0;
+  document.querySelectorAll('.t-step').forEach(s => s.classList.remove('done'));
+  document.getElementById('trackMsg').textContent = mensajes[0];
+
+  const intervalo = setInterval(() => {
+    document.getElementById('tstep-' + paso).classList.add('done');
+    paso++;
+    if (paso < mensajes.length) {
+      document.getElementById('trackMsg').textContent = mensajes[paso];
+    }
+    if (paso >= mensajes.length) {
+      clearInterval(intervalo);
+      carrito = [];
+      renderCart();
+    }
+  }, 1800);
+}
+
+function cerrarTracking() {
+  document.getElementById('trackingOverlay').classList.remove('show');
+}
+
+renderCategorias();
+renderGrid();
+renderCart();
+</script>
+</body>
+</html>

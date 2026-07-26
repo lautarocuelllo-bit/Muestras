@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<title>HelpDesk — Mesa de Ayuda</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6f8; color: #222; }
+  header { background: #14213d; color: white; padding: 16px 28px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { font-size: 18px; }
+  .new-ticket-btn { background: #fca311; color: #14213d; border: none; padding: 9px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; }
+
+  .summary { display: flex; gap: 16px; padding: 20px 28px 0; flex-wrap: wrap; }
+  .kpi { background: white; border-radius: 10px; padding: 14px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); flex: 1; min-width: 130px; text-align: center; }
+  .kpi .value { font-size: 20px; font-weight: bold; }
+  .kpi .label { font-size: 11px; color: #888; }
+
+  .container { padding: 20px 28px; }
+  .toolbar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar button { padding: 8px 14px; border: 1px solid #ddd; background: white; border-radius: 20px; cursor: pointer; font-size: 12px; }
+  .toolbar button.active { background: #14213d; color: white; border-color: #14213d; }
+  .search-box { padding: 8px 12px; border: 1px solid #ddd; border-radius: 20px; font-size: 12px; flex: 1; min-width: 180px; }
+
+  table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  th, td { padding: 12px 14px; text-align: left; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  th { background: #f8f9fa; color: #555; font-size: 12px; }
+  tr:hover { background: #fafbfc; cursor: pointer; }
+
+  .badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+  .badge.abierto { background: #fde3cf; color: #b5540a; }
+  .badge.curso { background: #d6e4ff; color: #1d4ed8; }
+  .badge.resuelto { background: #d3f7dc; color: #1a7a3c; }
+  .prio { font-size: 11px; font-weight: bold; }
+  .prio.alta { color: #e74c3c; }
+  .prio.media { color: #e67e22; }
+  .prio.baja { color: #27ae60; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal { background: white; border-radius: 12px; padding: 24px; width: 380px; max-height: 85vh; overflow-y: auto; }
+  .modal h3 { margin-bottom: 16px; font-size: 16px; }
+  .modal input, .modal select, .modal textarea { width: 100%; padding: 9px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-actions button { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .btn-cancel { background: #eee; }
+  .btn-save { background: #14213d; color: white; }
+
+  .detail-status-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .detail-status-row button { flex: 1; padding: 8px; font-size: 11px; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer; }
+  .detail-status-row button.active { background: #14213d; color: white; border-color: #14213d; }
+  .comment-box { background: #f7f8fa; border-radius: 8px; padding: 10px; font-size: 12px; margin-bottom: 8px; }
+  .comment-input { display: flex; gap: 6px; }
+  .comment-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+  .comment-input button { background: #14213d; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #14213d; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 400; opacity: 0; transition: all 0.3s; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎫 HelpDesk — Mesa de Ayuda</h1>
+  <button class="new-ticket-btn" onclick="abrirNuevoTicket()">+ Nuevo ticket</button>
+</header>
+
+<div class="summary" id="summary"></div>
+
+<div class="container">
+  <div class="toolbar">
+    <input type="text" class="search-box" id="buscar" placeholder="Buscar ticket..." oninput="renderTabla()">
+    <button class="filtro-btn active" data-f="todos" onclick="filtrar('todos', this)">Todos</button>
+    <button class="filtro-btn" data-f="abierto" onclick="filtrar('abierto', this)">Abiertos</button>
+    <button class="filtro-btn" data-f="curso" onclick="filtrar('curso', this)">En curso</button>
+    <button class="filtro-btn" data-f="resuelto" onclick="filtrar('resuelto', this)">Resueltos</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th>#</th><th>Asunto</th><th>Cliente</th><th>Prioridad</th><th>Estado</th></tr>
+    </thead>
+    <tbody id="tablaTickets"></tbody>
+  </table>
+</div>
+
+<!-- MODAL NUEVO TICKET -->
+<div class="modal-overlay" id="modalNuevo">
+  <div class="modal">
+    <h3>Nuevo ticket</h3>
+    <input type="text" id="nAsunto" placeholder="Asunto">
+    <input type="text" id="nCliente" placeholder="Cliente">
+    <select id="nPrioridad">
+      <option value="baja">Prioridad baja</option>
+      <option value="media" selected>Prioridad media</option>
+      <option value="alta">Prioridad alta</option>
+    </select>
+    <textarea id="nDescripcion" placeholder="Descripción del problema" rows="3"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal('modalNuevo')">Cancelar</button>
+      <button class="btn-save" onclick="crearTicket()">Crear ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div class="modal-overlay" id="modalDetalle">
+  <div class="modal" id="detalleContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let tickets = [
+  { id: 1, asunto: 'No puedo acceder a mi cuenta', cliente: 'Juan Pérez', prioridad: 'alta', estado: 'abierto', desc: 'Al iniciar sesión me dice contraseña incorrecta aunque la reseteé.', comentarios: [] },
+  { id: 2, asunto: 'Error al generar factura', cliente: 'Comercial Rivas', prioridad: 'media', estado: 'curso', desc: 'El sistema tira error 500 al intentar descargar la factura en PDF.', comentarios: ['Estamos revisando el módulo de facturación.'] },
+  { id: 3, asunto: 'Consulta sobre plan de suscripción', cliente: 'Ana López', prioridad: 'baja', estado: 'abierto', desc: 'Quiere saber si puede cambiar de plan mensual a anual.', comentarios: [] },
+  { id: 4, asunto: 'La app se cierra sola', cliente: 'Marcos Ibarra', prioridad: 'alta', estado: 'curso', desc: 'La app se cierra al abrir la sección de reportes.', comentarios: ['Reproducimos el error, en proceso de fix.'] },
+  { id: 5, asunto: 'Solicitud de reembolso', cliente: 'Carla Núñez', prioridad: 'media', estado: 'resuelto', desc: 'Pidió reembolso por cobro duplicado.', comentarios: ['Reembolso procesado correctamente.'] },
+];
+let nextId = 6;
+let filtroActivo = 'todos';
+let ticketActivo = null;
+
+function renderSummary() {
+  document.getElementById('summary').innerHTML = `
+    <div class="kpi"><div class="value">${tickets.filter(t=>t.estado==='abierto').length}</div><div class="label">Abiertos</div></div>
+    <div class="kpi"><div class="value">${tickets.filter(t=>t.estado==='curso').length}</div><div class="label">En curso</div></div>
+    <div class="kpi"><div class="value">${tickets.filter(t=>t.estado==='resuelto').length}</div><div class="label">Resueltos</div></div>
+    <div class="kpi"><div class="value">${tickets.filter(t=>t.prioridad==='alta' && t.estado!=='resuelto').length}</div><div class="label">Prioridad alta pendiente</div></div>
+  `;
+}
+
+function filtrar(f, btn) {
+  filtroActivo = f;
+  document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabla();
+}
+
+function renderTabla() {
+  const busqueda = document.getElementById('buscar').value.toLowerCase();
+  let lista = [...tickets].reverse();
+  if (filtroActivo !== 'todos') lista = lista.filter(t => t.estado === filtroActivo);
+  if (busqueda) lista = lista.filter(t => t.asunto.toLowerCase().includes(busqueda) || t.cliente.toLowerCase().includes(busqueda));
+
+  const estadoLabel = { abierto: 'Abierto', curso: 'En curso', resuelto: 'Resuelto' };
+  document.getElementById('tablaTickets').innerHTML = lista.length ? lista.map(t => `
+    <tr onclick="verDetalle(${t.id})">
+      <td>#${t.id}</td>
+      <td>${t.asunto}</td>
+      <td>${t.cliente}</td>
+      <td><span class="prio ${t.prioridad}">${t.prioridad.toUpperCase()}</span></td>
+      <td><span class="badge ${t.estado}">${estadoLabel[t.estado]}</span></td>
+    </tr>
+  `).join('') : '<tr><td colspan="5" style="text-align:center; color:#999; padding:20px;">No se encontraron tickets.</td></tr>';
+}
+
+function abrirNuevoTicket() { document.getElementById('modalNuevo').classList.add('show'); }
+function cerrarModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function crearTicket() {
+  const asunto = document.getElementById('nAsunto').value.trim();
+  const cliente = document.getElementById('nCliente').value.trim();
+  const prioridad = document.getElementById('nPrioridad').value;
+  const desc = document.getElementById('nDescripcion').value.trim();
+  if (!asunto || !cliente) { alert('Completá asunto y cliente.'); return; }
+
+  tickets.push({ id: nextId++, asunto, cliente, prioridad, estado: 'abierto', desc, comentarios: [] });
+  document.getElementById('nAsunto').value = '';
+  document.getElementById('nCliente').value = '';
+  document.getElementById('nDescripcion').value = '';
+  cerrarModal('modalNuevo');
+  renderSummary();
+  renderTabla();
+  mostrarToast('Ticket creado');
+}
+
+function verDetalle(id) {
+  ticketActivo = tickets.find(t => t.id === id);
+  renderDetalle();
+  document.getElementById('modalDetalle').classList.add('show');
+}
+
+function renderDetalle() {
+  const t = ticketActivo;
+  const estados = [
+    { id: 'abierto', label: 'Abierto' },
+    { id: 'curso', label: 'En curso' },
+    { id: 'resuelto', label: 'Resuelto' },
+  ];
+  document.getElementById('detalleContent').innerHTML = `
+    <h3>#${t.id} — ${t.asunto}</h3>
+    <p style="font-size:12px; color:#888; margin-bottom:10px;">${t.cliente} · Prioridad <span class="prio ${t.prioridad}">${t.prioridad.toUpperCase()}</span></p>
+    <p style="font-size:13px; margin-bottom:16px; color:#444;">${t.desc}</p>
+    <div class="detail-status-row">
+      ${estados.map(e => `<button class="${t.estado===e.id?'active':''}" onclick="cambiarEstado('${e.id}')">${e.label}</button>`).join('')}
+    </div>
+    <div>
+      ${t.comentarios.map(c => `<div class="comment-box">${c}</div>`).join('') || '<p style="font-size:12px; color:#999; margin-bottom:10px;">Sin comentarios todavía.</p>'}
+    </div>
+    <div class="comment-input">
+      <input type="text" id="nuevoComentario" placeholder="Agregar comentario...">
+      <button onclick="agregarComentario()">Enviar</button>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn-cancel" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+    </div>
+  `;
+}
+
+function cambiarEstado(estado) {
+  ticketActivo.estado = estado;
+  renderDetalle();
+  renderSummary();
+  renderTabla();
+  mostrarToast('Estado actualizado');
+}
+
+function agregarComentario() {
+  const val = document.getElementById('nuevoComentario').value.trim();
+  if (!val) return;
+  ticketActivo.comentarios.push(val);
+  renderDetalle();
+  mostrarToast('Comentario agregado');
+}
+
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+renderSummary();
+renderTabla();
+</script>
+</body>
+</html>
